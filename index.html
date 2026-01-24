@@ -15,28 +15,24 @@
     <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- GESTURES (necesario) -->
+    <!-- Gesture Detector -->
     <script src="https://cdn.jsdelivr.net/npm/aframe-gesture-detector@4.0.0/dist/aframe-gesture-detector.min.js"></script>
 
     <script>
-      AFRAME.registerComponent("rotate-scale", {
+      AFRAME.registerComponent("gesture-transform", {
         schema: {
-          scaleMin: { default: 0.05 },
-          scaleMax: { default: 2 }
+          minScale: { default: 0.05 },
+          maxScale: { default: 2 }
         },
 
         init: function () {
-          this.startScale = this.el.object3D.scale.clone();
-        },
-
-        tick: function () {
-          this.el.sceneEl.addEventListener("onefingermove", (e) => {
+          this.el.addEventListener("onefingermove", (e) => {
             this.el.object3D.rotation.y += e.detail.positionChange.x * 0.01;
           });
 
-          this.el.sceneEl.addEventListener("twofingermove", (e) => {
+          this.el.addEventListener("twofingermove", (e) => {
             let scale = this.el.object3D.scale.x + e.detail.spreadChange * 0.005;
-            scale = Math.min(this.data.scaleMax, Math.max(this.data.scaleMin, scale));
+            scale = Math.min(this.data.maxScale, Math.max(this.data.minScale, scale));
             this.el.object3D.scale.set(scale, scale, scale);
           });
         }
@@ -73,7 +69,7 @@
           scale="0.2 0.2 0.2"
           position="0 0 0"
           rotation="0 0 0"
-          rotate-scale
+          gesture-transform
         ></a-gltf-model>
       </a-entity>
 
