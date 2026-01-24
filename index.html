@@ -9,7 +9,10 @@
 
     <title>MindAR Test</title>
 
+    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
@@ -31,8 +34,19 @@
       device-orientation-permission-ui="enabled: false"
     >
 
+      <!-- CARGA DE ASSETS -->
+      <a-assets>
+        <a-asset-item id="model" src="assets/model.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- TARGET 0 -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-box color="red" depth="0.1" height="0.1" width="0.1"></a-box>
+        <a-gltf-model
+          src="#model"
+          scale="0.2 0.2 0.2"
+          position="0 0 0"
+          rotation="0 0 0"
+        ></a-gltf-model>
       </a-entity>
 
       <a-camera look-controls="enabled: false"></a-camera>
