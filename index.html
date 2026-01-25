@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
 
-    <title>MindAR Test</title>
+    <title>MindAR + Gestos</title>
 
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -26,14 +26,16 @@
         },
 
         init: function () {
-          this.el.addEventListener("onefingermove", (e) => {
-            this.el.object3D.rotation.y += e.detail.positionChange.x * 0.01;
+          const el = this.el;
+
+          el.addEventListener("onefingermove", (e) => {
+            el.object3D.rotation.y += e.detail.positionChange.x * 0.01;
           });
 
-          this.el.addEventListener("twofingermove", (e) => {
-            let scale = this.el.object3D.scale.x + e.detail.spreadChange * 0.005;
+          el.addEventListener("twofingermove", (e) => {
+            let scale = el.object3D.scale.x + e.detail.spreadChange * 0.003;
             scale = Math.min(this.data.maxScale, Math.max(this.data.minScale, scale));
-            this.el.object3D.scale.set(scale, scale, scale);
+            el.object3D.scale.set(scale, scale, scale);
           });
         }
       });
@@ -66,6 +68,7 @@
       <a-entity mindar-image-target="targetIndex: 0">
         <a-gltf-model
           src="#model"
+          class="clickable"
           scale="0.2 0.2 0.2"
           position="0 0 0"
           rotation="0 0 0"
@@ -73,7 +76,11 @@
         ></a-gltf-model>
       </a-entity>
 
-      <a-camera look-controls="enabled: false"></a-camera>
+      <a-camera
+        look-controls="enabled: false"
+        raycaster="objects: .clickable"
+      ></a-camera>
+
     </a-scene>
   </body>
 </html>
