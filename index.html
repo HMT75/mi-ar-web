@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-    <title>MindAR</title>
+    <title>MindAR Maqueta</title>
 
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -31,19 +31,20 @@
       device-orientation-permission-ui="enabled: false"
     >
 
+      <!-- Cargar modelo -->
       <a-assets>
         <a-asset-item id="model" src="assets/model.glb"></a-asset-item>
       </a-assets>
 
-      <!-- IMAGE TARGET -->
+      <!-- Image Target -->
       <a-entity mindar-image-target="targetIndex: 0">
 
-        <!-- MODELO 3D -->
+        <!-- Modelo fijo -->
         <a-gltf-model
           src="#model"
-          scale="0.2 0.2 0.2"
           position="0 0 0"
           rotation="90 0 0"
+          scale="0.25 0.25 0.25"
         ></a-gltf-model>
 
       </a-entity>
@@ -52,4 +53,3 @@
     </a-scene>
   </body>
 </html>
-
