@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>AR – Piel y Tejidos Blandos</title>
+
+  <!--
+    ORDEN CRÍTICO: A-Frame 1.4.2 + MindAR 1.2.2
+    Esta combinación es la más estable en Android (Xiaomi, Samsung)
+    y en iOS (Safari). NO cambiar versiones sin probar.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    /* CRÍTICO: html, body sin overflow para que el canvas de cámara
+       se inicialice correctamente en todos los dispositivos */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* A-Scene ocupa TODO — estructura que MindAR necesita */
+    a-scene {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    /* Capa UI sobre la escena AR */
+    #ui-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    /* Solo los elementos interactivos reciben toques */
+    #ui-layer button,
+    #ui-layer .layer-btn,
+    #menu-panel {
+      pointer-events: all;
+    }
+
+    /* Botón volver */
+    #btn-back {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff; border-radius: 20px;
+      padding: 7px 16px; font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* Indicador de estado */
+    #status {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.85);
+      border-radius: 20px; padding: 7px 14px;
+      font-size: 12px;
+      display: flex; align-items: center; gap: 7px;
+    }
+
+    #status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #f59e0b;
+      animation: blink 1.4s infinite;
+      flex-shrink: 0;
+    }
+    #status-dot.ok { background: #22c55e; animation: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* Instrucción central */
+    #hint {
+      position: absolute;
+      bottom: 200px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      color: #fff; border-radius: 14px;
+      padding: 12px 20px; font-size: 13px;
+      text-align: center; line-height: 1.5;
+      max-width: 270px;
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: opacity 0.4s;
+    }
+
+    /* Panel inferior de capas */
+    #menu-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(8,18,34,0.93);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 14px 16px 28px;
+      display: none;
+      pointer-events: all;
+    }
+    #menu-panel.show { display: block; }
+
+    .menu-label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1.3px; color: rgba(255,255,255,0.35);
+      text-align: center; margin-bottom: 12px;
+    }
+
+    .btns-row {
+      display: flex; gap: 10px;
+      justify-content: center; flex-wrap: wrap;
+    }
+
+    .layer-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      color: #fff; font-size: 16px; font-weight: 700;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .layer-btn.active {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+
+    /* Tarjeta de info */
+    #info-card {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 12px 14px;
+      display: none;
+    }
+    #info-card.show { display: block; }
+
+    #info-close {
+      float: right; background: none; border: none;
+      color: rgba(255,255,255,0.4);
+      font-size: 20px; cursor: pointer; line-height: 1;
+    }
+    #info-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 5px; }
+    #info-body  { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.65; }
+  </style>
+</head>
+<body>
+
+  <!--
+    ESCENA AR
+    Reglas críticas para que la cámara funcione:
+    1. NO usar "embedded" — bloquea la inicialización de cámara
+    2. a-scene en position:fixed cubriendo 100% pantalla
+    3. a-camera sin look-controls y sin wasd-controls
+    4. Scripts A-Frame antes de MindAR
+  -->
+  <a-scene
+    mindar-image="imageTargetSrc: assets/targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
+  >
+
+    <a-assets timeout="15000">
+      <a-asset-item id="skin-model" src="assets/model.glb"></a-asset-item>
+    </a-assets>
+
+    <a-light type="ambient"     color="#ffffff" intensity="1.0"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.6" position="0 1 1"></a-light>
+
+    <a-entity mindar-image-target="targetIndex: 0" id="ar-target">
+      <a-gltf-model
+        id="skin-mesh"
+        src="#skin-model"
+        position="0 0 0"
+        rotation="-90 0 0"
+        scale="0.18 0.18 0.18"
+        visible="false"
+      ></a-gltf-model>
+    </a-entity>
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+      wasd-controls="enabled: false"
+    ></a-camera>
+
+  </a-scene>
+
+  <!-- CAPA UI encima de la escena -->
+  <div id="ui-layer">
+
+    <button id="btn-back" onclick="location.href='index.html'">← Volver</button>
+
+    <div id="status">
+      <div id="status-dot"></div>
+      <span id="status-text">Iniciando cámara...</span>
+    </div>
+
+    <div id="hint">Apunta la cámara a la imagen marcador para ver el modelo 3D</div>
+
+    <div id="menu-panel">
+      <div class="menu-label">Capas anatómicas — toca un número</div>
+      <div class="btns-row" id="btns-row"></div>
+      <div id="info-card">
+        <button id="info-close" onclick="closeInfo()">×</button>
+        <div id="info-title"></div>
+        <div id="info-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* ══════════════════════════════════════════
+       DATOS DE CAPAS — reemplaza con tu contenido clínico real
+       ══════════════════════════════════════════ */
+    const CAPAS = [
+      {
+        n: 1, nombre: "Epidermis",
+        texto: "Capa más superficial. Barrera principal frente a patógenos. Compuesta por queratinocitos. Grosor 0.05–1.5 mm según zona corporal."
+      },
+      {
+        n: 2, nombre: "Dermis",
+        texto: "Tejido conectivo denso con colágeno y elastina. Contiene folículos pilosos y glándulas. Principal sitio de infección en celulitis."
+      },
+      {
+        n: 3, nombre: "Hipodermis",
+        texto: "Tejido adiposo subcutáneo. Comprometido en infecciones graves. Depósito energético y aislante térmico."
+      },
+      {
+        n: 4, nombre: "Fascia superficial",
+        texto: "Capa fibrosa entre hipodermis y músculo. Infección aquí es emergencia quirúrgica (fascitis necrotizante, Fournier)."
+      },
+      {
+        n: 5, nombre: "Músculo",
+        texto: "Miositis infecciosa: poco frecuente. Agentes: S. aureus, Strep. grupo A. Piomiositis más común en trópicos."
+      }
+    ];
+
+    /* ══════════════════════════════════════════
+       ESTADO Y REFERENCIAS
+       ══════════════════════════════════════════ */
+    let activado = false;
+
+    const dot       = document.getElementById('status-dot');
+    const statusTxt = document.getElementById('status-text');
+    const hint      = document.getElementById('hint');
+    const menuPanel = document.getElementById('menu-panel');
+    const btnsRow   = document.getElementById('btns-row');
+    const infoCard  = document.getElementById('info-card');
+    const infoTitle = document.getElementById('info-title');
+    const infoBody  = document.getElementById('info-body');
+
+    /* Genera botones numerados */
+    CAPAS.forEach(c => {
+      const b = document.createElement('button');
+      b.className   = 'layer-btn';
+      b.textContent = c.n;
+      b.onclick = () => mostrarInfo(c, b);
+      btnsRow.appendChild(b);
+    });
+
+    function mostrarInfo(capa, btn) {
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      infoTitle.textContent = `${capa.n}. ${capa.nombre}`;
+      infoBody.textContent  = capa.texto;
+      infoCard.classList.add('show');
+    }
+
+    function closeInfo() {
+      infoCard.classList.remove('show');
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    /* ══════════════════════════════════════════
+       EVENTOS AR
+       ══════════════════════════════════════════ */
+    const scene  = document.querySelector('a-scene');
+    const target = document.getElementById('ar-target');
+    const modelo = document.getElementById('skin-mesh');
+
+    scene.addEventListener('loaded', () => {
+      statusTxt.textContent = 'Buscando marcador...';
+    });
+
+    /* Anchor-lock: activa modelo solo la primera vez que detecta el target */
+    target.addEventListener('targetFound', () => {
+      if (activado) return;
+      activado = true;
+
+      modelo.setAttribute('visible', 'true');
+      dot.classList.add('ok');
+      statusTxt.textContent = 'Modelo activo ✓';
+      hint.style.opacity = '0';
+      setTimeout(() => { hint.style.display = 'none'; }, 400);
+      menuPanel.classList.add('show');
+    });
+
+    /* Target perdido: el modelo se mantiene visible (anchor-lock) */
+    target.addEventListener('targetLost', () => {
+      if (!activado) return;
+      statusTxt.textContent = 'Modelo fijo ✓';
+    });
+  </script>
+
+</body>
+</html>
