@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Algoritmo Diagnóstico – IPTB</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      color: #1a2030;
+    }
+
+    /* ── Header ── */
+    .top-bar {
+      background: #102040;
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .top-bar a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .top-bar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    /* ── Progreso ── */
+    .progress-bar {
+      height: 3px;
+      background: rgba(255,255,255,0.15);
+    }
+    .progress-fill {
+      height: 100%;
+      background: #1d9e75;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    /* ── Contenido ── */
+    .content {
+      padding: 1.5rem 1rem 4rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Tarjeta de pregunta ── */
+    .question-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .step-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7a8d;
+      margin-bottom: 8px;
+    }
+
+    .question-text {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: #1a2030;
+      margin-bottom: 1.2rem;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #6b7a8d;
+      background: #f4f7fb;
+      border-left: 3px solid #378add;
+      padding: 8px 12px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 1.2rem;
+      line-height: 1.5;
+    }
+
+    /* ── Opciones ── */
+    .options { display: flex; flex-direction: column; gap: 8px; }
+
+    .option-btn {
+      background: #f4f7fb;
+      border: 1.5px solid #dde3ee;
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a2030;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .option-btn:active { background: #e0eaf8; border-color: #378add; }
+
+    .option-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+      background: rgba(55,138,221,0.12);
+    }
+    .option-btn.danger-opt .option-icon { background: rgba(226,75,74,0.12); }
+
+    /* ── Tarjeta de resultado ── */
+    .result-card {
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .result-card.success { background: #e8f8f2; border: 1.5px solid #1d9e75; }
+    .result-card.warning { background: #fff8e6; border: 1.5px solid #ba7517; }
+    .result-card.danger  { background: #fdf0f0; border: 1.5px solid #e24b4a; }
+
+    .result-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .result-card.success .result-label { color: #0f6e56; }
+    .result-card.warning .result-label { color: #854f0b; }
+    .result-card.danger  .result-label { color: #a32d2d; }
+
+    .result-title {
+      font-size: 17px; font-weight: 700; margin-bottom: 8px;
+    }
+    .result-card.success .result-title { color: #085041; }
+    .result-card.warning .result-title { color: #633806; }
+    .result-card.danger  .result-title { color: #791f1f; }
+
+    .result-text {
+      font-size: 13px; line-height: 1.7;
+    }
+    .result-card.success .result-text { color: #0f6e56; }
+    .result-card.warning .result-text { color: #854f0b; }
+    .result-card.danger  .result-text { color: #a32d2d; }
+
+    /* ── Breadcrumb de ruta ── */
+    .breadcrumb {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 1rem;
+      font-size: 12px;
+      color: #6b7a8d;
+      line-height: 1.8;
+    }
+    .breadcrumb strong { color: #1a2030; }
+
+    /* ── Botón reiniciar ── */
+    .btn-restart {
+      display: block; width: 100%;
+      background: #102040; color: #fff;
+      border: none; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 600;
+      cursor: pointer; margin-top: 1rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-next-section {
+      display: block; width: 100%;
+      background: #fff; color: #102040;
+      border: 1.5px solid #dde3ee; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 600;
+      cursor: pointer; margin-top: 8px; text-align: center;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="index.html">←</a>
+    <h1>Algoritmo diagnóstico – IPTB</h1>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+  <div class="content" id="content">
+    <!-- Se renderiza dinámicamente -->
+  </div>
+
+  <script>
+    /* ════════════════════════════════════════
+       ÁRBOL DE DECISIÓN
+       Estructura: cada nodo tiene id, texto, nota (opcional),
+       y opciones con texto + nodo destino.
+       Los nodos sin opciones son resultados finales.
+       ════════════════════════════════════════ */
+    const TREE = {
+
+      start: {
+        step: "Evaluación inicial",
+        q: "¿El paciente presenta signos de infección en piel o tejidos blandos?",
+        note: "Buscar: eritema, calor, edema, dolor, secreción purulenta o fluctuación.",
+        opts: [
+          { text: "Sí, hay signos locales", next: "severidad" },
+          { text: "No — síntomas sistémicos sin foco claro", next: "no-iptb" }
+        ]
+      },
+
+      severidad: {
+        step: "Gravedad sistémica",
+        q: "¿Hay signos de sepsis o compromiso sistémico grave?",
+        note: "Sepsis: FC >100, FR >22, alteración del estado mental, TAS <100 mmHg, PCR elevada.",
+        opts: [
+          { text: "Sí — paciente en sepsis o estado crítico", next: "sepsis-grave", danger: true },
+          { text: "No — estable hemodinámicamente", next: "tipo-lesion" }
+        ]
+      },
+
+      "sepsis-grave": {
+        step: "Emergencia",
+        q: "¿Hay crepitación, necrosis visible, gas en tejidos o evolución ultrarrápida (<24 h)?",
+        note: "Estos hallazgos orientan a fascitis necrotizante. Requieren clasificación quirúrgica urgente.",
+        opts: [
+          { text: "Sí — sospecha fascitis necrotizante", next: "fn-urgente", danger: true },
+          { text: "No — sepsis sin necrosis", next: "sepsis-abx" }
+        ]
+      },
+
+      "fn-urgente": {
+        step: null,
+        result: "danger",
+        title: "⚠ Fascitis necrotizante — Emergencia quirúrgica",
+        body: "Activar equipo quirúrgico de inmediato.\nDesbridamiento amplio dentro de las primeras 6 horas.\nAntibioticoterapia empírica: Piperacilina/Tazobactam + Clindamicina (anti-toxina) ± Vancomicina si se sospecha SARM.\nRemitir a UCI."
+      },
+
+      "sepsis-abx": {
+        step: null,
+        result: "warning",
+        title: "Sepsis por IPTB — Hospitalización urgente",
+        body: "Ingreso hospitalario. Hemocultivos previo a antibióticos.\nEmpírico: Cefazolina 2g IV c/8h (no SARM) o Vancomicina 15–20 mg/kg IV c/12h (SARM).\nEvaluar diariamente — si aparece necrosis, reevaluar vía quirúrgica."
+      },
+
+      "tipo-lesion": {
+        step: "Tipo de lesión",
+        q: "¿Cómo es la lesión principal?",
+        opts: [
+          { text: "Zona eritematosa, cálida, sin fluctuación (celulitis)", next: "celulitis" },
+          { text: "Nódulo/pústula fluctuante, absceso localizado", next: "absceso" },
+          { text: "Herida con signos de infección", next: "herida" },
+          { text: "Lesiones ampollosas o vesículas", next: "bulas" }
+        ]
+      },
+
+      celulitis: {
+        step: "Celulitis",
+        q: "¿El paciente tiene criterios de hospitalización?",
+        note: "Hospitalizar si: fiebre >38°C, leucocitosis, progresión rápida, no mejora tras 48 h de ABX oral, inmunosupresión, face o área periorbitaria.",
+        opts: [
+          { text: "Sí — requiere hospitalización", next: "celulitis-iv" },
+          { text: "No — manejo ambulatorio posible", next: "celulitis-oral" }
+        ]
+      },
+
+      "celulitis-iv": {
+        step: null, result: "warning",
+        title: "Celulitis — Tratamiento IV hospitalario",
+        body: "Cefazolina 1–2 g IV c/8h (beta-hemolíticos/SASM).\nSi sospecha SARM: Vancomicina IV.\nMarcar bordes del eritema para seguimiento.\nControles cada 24 h."
+      },
+
+      "celulitis-oral": {
+        step: null, result: "success",
+        title: "Celulitis — Tratamiento ambulatorio",
+        body: "Cefalexina 500 mg VO c/6h × 5–7 días.\nSi alergia: Clindamicina 300 mg c/8h.\nControl en 48 h. Si no mejora → hospitalizar.\nElevar extremidad afectada."
+      },
+
+      absceso: {
+        step: "Absceso",
+        q: "¿El absceso es >2 cm o en zona de riesgo (cara, mano, genitales)?",
+        opts: [
+          { text: "Sí", next: "absceso-incision" },
+          { text: "No — pequeño y superficial", next: "absceso-menor" }
+        ]
+      },
+
+      "absceso-incision": {
+        step: null, result: "warning",
+        title: "Absceso — Incisión y drenaje",
+        body: "Incisión y drenaje es el tratamiento principal.\nCultivo del material purulento.\nAntibiótoco sólo si: >2cm, inmunosupresión, celulitis extensiva o fiebre:\nTMP-SMX DS 1 tableta VO c/12h × 5–7 días (cubre SARM comunitario).\nSeguimiento en 48 h."
+      },
+
+      "absceso-menor": {
+        step: null, result: "success",
+        title: "Absceso superficial pequeño",
+        body: "Calor húmedo local 3–4 veces al día.\nPuede drenar espontáneamente.\nSi no drena en 48–72 h o crece: incisión y drenaje.\nAntibióticos generalmente no necesarios si <2 cm en inmunocompetente."
+      },
+
+      herida: {
+        step: null, result: "warning",
+        title: "Infección de herida",
+        body: "Limpieza con suero fisiológico a presión.\nDesbridamiento de tejido necrótico.\nCultivo si hay secreción.\nAntibiótoco según profundidad:\n- Superficial: Cefalexina oral.\n- Profunda o fascial: valorar hospitalización y cobertura para gram negativos.\nVerificar estado de vacunación antitetánica."
+      },
+
+      bulas: {
+        step: null, result: "danger",
+        title: "Lesiones ampollosas — Evaluar urgentemente",
+        body: "Descartar: erisipela ampollosa, síndrome de piel escaldada, fascitis necrotizante.\nNo puncionar si hay duda diagnóstica.\nDerivación urgente a dermatología o cirugía si hay compromiso sistémico.\nCultivo de bulas intactas si posible."
+      },
+
+      "no-iptb": {
+        step: null, result: "warning",
+        title: "No sugiere IPTB primaria",
+        body: "Considerar diagnósticos alternativos: trombosis venosa profunda, erisipeloide, dermatitis de contacto, lipodermatoesclerosis.\nSi persiste duda clínica: hemocultivos, eco doppler de miembros, interconsulta dermatología."
+      }
+    };
+
+    /* ── Estado ── */
+    let history  = [];   // [{nodeId, optionText}]
+    let current  = 'start';
+
+    const TOTAL_STEPS = 5; // estimado para la barra de progreso
+
+    function render() {
+      const node = TREE[current];
+      const content = document.getElementById('content');
+      const progress = document.getElementById('progress');
+
+      // Progreso
+      progress.style.width = Math.min(100, (history.length / TOTAL_STEPS) * 100) + '%';
+
+      let html = '';
+
+      // Breadcrumb
+      if (history.length > 0) {
+        html += '<div class="breadcrumb"><strong>Ruta:</strong> ';
+        html += history.map(h => h.optionText).join(' → ');
+        html += '</div>';
+      }
+
+      // Resultado final
+      if (node.result) {
+        const cls = node.result;
+        html += `
+          <div class="result-card ${cls}">
+            <div class="result-label">${cls === 'success' ? '✓ Recomendación' : cls === 'warning' ? '⚠ Atención' : '🚨 Urgente'}</div>
+            <div class="result-title">${node.title}</div>
+            <div class="result-text" style="white-space: pre-line;">${node.body}</div>
+          </div>
+        `;
+        html += `<button class="btn-restart" onclick="restart()">↺ Nuevo paciente</button>`;
+        html += `<a class="btn-next-section" href="clasificacion.html">Ver clasificación de IPTB →</a>`;
+
+      } else {
+        // Pregunta
+        html += `
+          <div class="question-card">
+            ${node.step ? `<div class="step-label">${node.step}</div>` : ''}
+            <div class="question-text">${node.q}</div>
+            ${node.note ? `<div class="note">${node.note}</div>` : ''}
+            <div class="options">
+              ${node.opts.map((opt, i) => `
+                <button class="option-btn ${opt.danger ? 'danger-opt' : ''}"
+                  onclick="choose(${i})">
+                  <div class="option-icon">${opt.danger ? '⚠' : '→'}</div>
+                  ${opt.text}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        if (history.length > 0) {
+          html += `<button class="btn-restart" style="background:#6b7a8d;" onclick="goBack()">← Anterior</button>`;
+        }
+      }
+
+      content.innerHTML = html;
+      window.scrollTo(0, 0);
+    }
+
+    function choose(optIndex) {
+      const node = TREE[current];
+      const opt  = node.opts[optIndex];
+      history.push({ nodeId: current, optionText: opt.text });
+      current = opt.next;
+      render();
+    }
+
+    function goBack() {
+      if (history.length === 0) return;
+      const prev = history.pop();
+      current = prev.nodeId;
+      render();
+    }
+
+    function restart() {
+      history  = [];
+      current  = 'start';
+      render();
+    }
+
+    // Inicio
+    render();
+  </script>
+
+</body>
+</html>
