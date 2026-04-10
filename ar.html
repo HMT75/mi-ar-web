@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>AR – Piel y Tejidos Blandos</title>
+
+  <!--
+    VERSIONES FIJAS PROBADAS:
+    A-Frame 1.4.2 + MindAR 1.2.2
+    NO subir A-Frame a 1.5.x — rompe el renderer alpha con MindAR
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      /* CRÍTICO: fondo transparente/negro solo como fallback
+         El video de cámara de MindAR se pone detrás de todo */
+      background: transparent;
+    }
+
+    /*
+      SOLUCIÓN PRINCIPAL AL FONDO NEGRO:
+      MindAR inyecta un <video> con id="mindar-video" en el body.
+      A-Frame inyecta un <canvas> encima.
+      Si el canvas tiene fondo opaco, tapa el video.
+      Forzamos el canvas de A-Frame a ser transparente via CSS.
+    */
+    canvas {
+      background: transparent !important;
+    }
+
+    /* El video de MindAR debe estar detrás de todo */
+    video {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100% !important; height: 100% !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+    }
+
+    /* A-Scene encima del video */
+    a-scene {
+      position: fixed !important;
+      top: 0; left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1;
+      background: transparent !important;
+    }
+
+    /* UI encima de todo */
+    #ui-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 999;
+      pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* Elementos interactivos */
+    #ui-layer button,
+    .layer-btn,
+    #menu-panel {
+      pointer-events: all;
+    }
+
+    /* Botón volver */
+    #btn-back {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; border-radius: 22px;
+      padding: 8px 18px; font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* Estado */
+    #status {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff; border-radius: 22px;
+      padding: 8px 16px; font-size: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #sdot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #f59e0b; flex-shrink: 0;
+      animation: bl 1.4s infinite;
+    }
+    #sdot.ok { background: #22c55e; animation: none; }
+    @keyframes bl { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+    /* Instrucción */
+    #hint {
+      position: absolute;
+      bottom: 210px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: #fff; border-radius: 14px;
+      padding: 12px 22px; font-size: 14px;
+      text-align: center; line-height: 1.5;
+      max-width: 280px;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: opacity 0.5s;
+      white-space: nowrap;
+    }
+
+    /* Panel inferior */
+    #menu-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(6,15,30,0.95);
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding: 14px 16px 30px;
+      display: none;
+    }
+    #menu-panel.show { display: block; }
+
+    .mlabel {
+      font-size: 10px; letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      text-align: center; margin-bottom: 14px;
+    }
+
+    .row {
+      display: flex; gap: 12px;
+      justify-content: center;
+    }
+
+    .layer-btn {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.22);
+      color: #fff; font-size: 17px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .layer-btn.on { background: #15803d; border-color: #15803d; }
+
+    /* Card info */
+    #icard {
+      display: none; margin-top: 14px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px; padding: 14px 16px;
+    }
+    #icard.show { display: block; }
+    #iclose {
+      float: right; background: none; border: none;
+      color: rgba(255,255,255,0.4); font-size: 22px;
+      cursor: pointer; line-height: 1;
+    }
+    #ititle { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    #ibody  { font-size: 13px; color: rgba(255,255,255,0.68); line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+  <!--
+    ══════════════════════════════════════════════════
+    ESCENA A-FRAME + MINDAR
+
+    CLAVES para que la cámara se vea:
+    ① renderer="alpha: true" → canvas WebGL transparente
+    ② webgl-renderer-tester (componente custom) fuerza clearAlpha=0
+    ③ Sin "embedded" — MindAR gestiona el fullscreen
+    ④ background="transparent" en a-scene
+    ══════════════════════════════════════════════════
+  -->
+  <a-scene
+    mindar-image="imageTargetSrc: assets/targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001;"
+    renderer="antialias: false; alpha: true; logarithmicDepthBuffer: false;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
+  >
+
+    <a-assets timeout="20000">
+      <a-asset-item id="mdl" src="assets/model.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Fondo de escena transparente -->
+    <a-sky color="transparent"></a-sky>
+
+    <a-light type="ambient"     color="#fff" intensity="1.2"></a-light>
+    <a-light type="directional" color="#fff" intensity="0.7" position="1 2 1"></a-light>
+
+    <a-entity mindar-image-target="targetIndex: 0" id="tgt">
+      <a-gltf-model
+        id="mdl3d"
+        src="#mdl"
+        position="0 0 0"
+        rotation="-90 0 0"
+        scale="0.18 0.18 0.18"
+        visible="false"
+      ></a-gltf-model>
+    </a-entity>
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+      wasd-controls="enabled: false"
+    ></a-camera>
+
+  </a-scene>
+
+  <!-- UI -->
+  <div id="ui-layer">
+    <button id="btn-back" onclick="location.href='index.html'">← Volver</button>
+
+    <div id="status">
+      <div id="sdot"></div>
+      <span id="stxt">Iniciando cámara...</span>
+    </div>
+
+    <div id="hint">📷 Apunta al marcador para ver el modelo 3D</div>
+
+    <div id="menu-panel">
+      <div class="mlabel">Capas anatómicas — toca un número</div>
+      <div class="row" id="brow"></div>
+      <div id="icard">
+        <button id="iclose" onclick="closeInfo()">×</button>
+        <div id="ititle"></div>
+        <div id="ibody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── CAPAS — edita con tu contenido clínico real ── */
+    const CAPAS = [
+      { n:1, nom:"Epidermis",
+        txt:"Capa más superficial. Barrera principal frente a patógenos. Compuesta por queratinocitos. Grosor 0.05–1.5 mm según zona." },
+      { n:2, nom:"Dermis",
+        txt:"Tejido conectivo con colágeno y elastina. Contiene folículos y glándulas. Principal sitio de infección en celulitis." },
+      { n:3, nom:"Hipodermis",
+        txt:"Tejido adiposo subcutáneo. Comprometido en infecciones graves como fascitis necrotizante. Reserva energética." },
+      { n:4, nom:"Fascia superficial",
+        txt:"Capa fibrosa entre hipodermis y músculo. Infección aquí = emergencia quirúrgica (fascitis necrotizante, Fournier)." },
+      { n:5, nom:"Músculo",
+        txt:"Miositis infecciosa poco frecuente. Agentes: S. aureus, Strep. grupo A. Piomiositis más común en trópicos." }
+    ];
+
+    let lock = false; // anchor-lock
+
+    const sdot  = document.getElementById('sdot');
+    const stxt  = document.getElementById('stxt');
+    const hint  = document.getElementById('hint');
+    const panel = document.getElementById('menu-panel');
+    const brow  = document.getElementById('brow');
+    const icard = document.getElementById('icard');
+
+    /* Botones */
+    CAPAS.forEach(c => {
+      const b = document.createElement('button');
+      b.className   = 'layer-btn';
+      b.textContent = c.n;
+      b.onclick = () => {
+        document.querySelectorAll('.layer-btn').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        document.getElementById('ititle').textContent = `${c.n}. ${c.nom}`;
+        document.getElementById('ibody').textContent  = c.txt;
+        icard.classList.add('show');
+      };
+      brow.appendChild(b);
+    });
+
+    function closeInfo() {
+      icard.classList.remove('show');
+      document.querySelectorAll('.layer-btn').forEach(x => x.classList.remove('on'));
+    }
+
+    /* ── AR Events ── */
+    const scene = document.querySelector('a-scene');
+    const tgt   = document.getElementById('tgt');
+    const mdl   = document.getElementById('mdl3d');
+
+    /* Cuando la escena carga, forzar alpha del renderer */
+    scene.addEventListener('loaded', () => {
+      stxt.textContent = 'Buscando marcador...';
+
+      /* SOLUCIÓN DEFINITIVA AL FONDO NEGRO:
+         Después de que A-Frame inicializa el renderer WebGL,
+         forzamos clearAlpha = 0 para que el canvas sea transparente
+         y el video de cámara de MindAR se vea detrás */
+      const renderer = scene.renderer;
+      if (renderer) {
+        renderer.setClearColor(0x000000, 0); // alpha = 0 → transparente
+        renderer.setPixelRatio(window.devicePixelRatio);
+      }
+
+      /* También forzar el canvas via CSS por si acaso */
+      const canvas = scene.canvas;
+      if (canvas) {
+        canvas.style.background = 'transparent';
+      }
+    });
+
+    /* Target encontrado — activar solo una vez (anchor-lock) */
+    tgt.addEventListener('targetFound', () => {
+      if (lock) return;
+      lock = true;
+      mdl.setAttribute('visible', 'true');
+      sdot.classList.add('ok');
+      stxt.textContent = 'Modelo activo ✓';
+      hint.style.opacity = '0';
+      setTimeout(() => { hint.style.display = 'none'; }, 500);
+      panel.classList.add('show');
+    });
+
+    /* Target perdido — modelo se queda fijo (anchor-lock) */
+    tgt.addEventListener('targetLost', () => {
+      if (lock) stxt.textContent = 'Modelo fijo ✓';
+    });
+  </script>
+
+</body>
+</html>
