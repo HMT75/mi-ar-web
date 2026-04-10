@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>AR – Piel y Tejidos Blandos</title>
+
+  <!-- ── Librerías: A-Frame PRIMERO, luego MindAR ── -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+    /* ── Botón volver ── */
+    #btn-back {
+      position: fixed; top: 14px; left: 14px; z-index: 999;
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; border-radius: 20px; padding: 6px 14px;
+      font-size: 13px; font-family: -apple-system, sans-serif;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(6px);
+    }
+
+    /* ── Indicador de estado ── */
+    #status {
+      position: fixed; top: 14px; right: 14px; z-index: 999;
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8); border-radius: 20px; padding: 6px 14px;
+      font-size: 12px; font-family: -apple-system, sans-serif;
+      backdrop-filter: blur(6px); display: flex; align-items: center; gap: 6px;
+    }
+    #status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    #status-dot.found { background: #1d9e75; animation: none; }
+
+    /* ── Instrucción inicial ── */
+    #hint {
+      position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
+      z-index: 990; background: rgba(0,0,0,0.6); color: #fff;
+      border-radius: 12px; padding: 10px 18px; font-size: 13px;
+      font-family: -apple-system, sans-serif; text-align: center;
+      backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15);
+      max-width: 280px; line-height: 1.5; transition: opacity 0.4s;
+    }
+
+    /* ── Panel menú flotante ── */
+    #menu-panel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+      background: rgba(10,22,40,0.92);
+      border-top: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px 20px;
+      font-family: -apple-system, sans-serif;
+      display: none;
+    }
+
+    #menu-panel.visible { display: block; }
+
+    .menu-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: rgba(255,255,255,0.4); margin-bottom: 10px; text-align: center;
+    }
+
+    .layers-row {
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .layers-row::-webkit-scrollbar { display: none; }
+
+    .layer-btn {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; border-radius: 50%;
+      width: 42px; height: 42px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .layer-btn.active {
+      background: #1d9e75;
+      border-color: #1d9e75;
+    }
+
+    /* ── Panel de info de capa ── */
+    #info-card {
+      margin-top: 10px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: none;
+    }
+    #info-card.visible { display: block; }
+    #info-title {
+      font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;
+    }
+    #info-text {
+      font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.6;
+    }
+    #info-close {
+      float: right; background: none; border: none;
+      color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer;
+      line-height: 1; margin-top: -2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Botón volver ── -->
+  <button id="btn-back" onclick="location.href='index.html'">← Volver</button>
+
+  <!-- ── Indicador estado ── -->
+  <div id="status">
+    <div id="status-dot"></div>
+    <span id="status-text">Buscando marcador...</span>
+  </div>
+
+  <!-- ── Instrucción ── -->
+  <div id="hint">📸 Apunta la cámara a la imagen marcador para activar el modelo 3D</div>
+
+  <!-- ════════════════════════════════════════
+       ESCENA A-FRAME / MINDAR
+       ════════════════════════════════════════ -->
+  <a-scene
+    mindar-image="imageTargetSrc: assets/targets.mind; maxTrack: 1; filterMinCF: 0.001; filterBeta: 0.001;"
+    color-space="sRGB"
+    renderer="antialias: false; physicallyCorrectLights: false; colorManagement: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
+    style="width:100%;height:100%;"
+  >
+
+    <a-assets timeout="30000">
+      <a-asset-item id="skin-model" src="assets/model.glb" preload="auto"></a-asset-item>
+    </a-assets>
+
+    <!-- ── Iluminación ligera ── -->
+    <a-light type="ambient" intensity="1.2"></a-light>
+    <a-light type="directional" position="0 2 1" intensity="0.8"></a-light>
+
+    <!-- ── Image Target ── -->
+    <a-entity mindar-image-target="targetIndex: 0" id="ar-target">
+      <a-gltf-model
+        id="skin-mesh"
+        src="#skin-model"
+        position="0 0 0"
+        rotation="-90 0 0"
+        scale="0.18 0.18 0.18"
+        visible="false"
+      ></a-gltf-model>
+    </a-entity>
+
+    <a-camera look-controls="enabled: false" position="0 0 0"></a-camera>
+
+  </a-scene>
+
+  <!-- ════════════════════════════════════════
+       MENÚ FLOTANTE DE CAPAS
+       ════════════════════════════════════════ -->
+  <div id="menu-panel">
+    <div class="menu-title">Selecciona una capa anatómica</div>
+    <div class="layers-row" id="layers-row">
+      <!-- Se generan dinámicamente -->
+    </div>
+    <div id="info-card">
+      <button id="info-close" onclick="closeInfo()">×</button>
+      <div id="info-title"></div>
+      <div id="info-text"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       LÓGICA JS
+       ════════════════════════════════════════ -->
+  <script>
+    /* ── Datos de las capas anatómicas ── 
+       Personaliza este array con tu contenido clínico real */
+    const LAYERS = [
+      {
+        num: 1,
+        name: "Epidermis",
+        desc: "Capa más superficial de la piel. Barrera protectora frente a patógenos. Compuesta principalmente por queratinocitos. Grosor: 0.05–1.5 mm según la zona corporal."
+      },
+      {
+        num: 2,
+        name: "Dermis",
+        desc: "Tejido conectivo denso con colágeno y elastina. Contiene folículos pilosos, glándulas sudoríparas y sebáceas. Principal sitio de infección en celulitis."
+      },
+      {
+        num: 3,
+        name: "Hipodermis",
+        desc: "Tejido adiposo subcutáneo. Compromiso en infecciones graves como fascitis necrotizante tipo II. Depósito energético y aislamiento térmico."
+      },
+      {
+        num: 4,
+        name: "Fascia superficial",
+        desc: "Capa fibrosa que separa hipodermis del músculo. Infección a este nivel constituye una emergencia quirúrgica (Fournier, fascitis necrotizante)."
+      },
+      {
+        num: 5,
+        name: "Músculo",
+        desc: "Miositis infecciosa poco frecuente. Agentes: S. aureus, Streptococcus grupo A en inmunocompetentes. La piomiositis es más común en zonas tropicales."
+      }
+    ];
+
+    /* ── Estado ── */
+    let modelFound   = false;
+    let modelVisible = false;
+    let frozenPos    = null;   // posición congelada al primer detección
+
+    /* ── Referencias DOM ── */
+    const statusDot  = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const hint       = document.getElementById('hint');
+    const menuPanel  = document.getElementById('menu-panel');
+    const layersRow  = document.getElementById('layers-row');
+    const infoCard   = document.getElementById('info-card');
+    const infoTitle  = document.getElementById('info-title');
+    const infoText   = document.getElementById('info-text');
+
+    /* ── Genera botones de capas ── */
+    LAYERS.forEach(layer => {
+      const btn = document.createElement('button');
+      btn.className = 'layer-btn';
+      btn.textContent = layer.num;
+      btn.setAttribute('aria-label', layer.name);
+      btn.addEventListener('click', () => showLayerInfo(layer, btn));
+      layersRow.appendChild(btn);
+    });
+
+    /* ── Muestra info de capa ── */
+    function showLayerInfo(layer, btn) {
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      infoTitle.textContent = `${layer.num}. ${layer.name}`;
+      infoText.textContent  = layer.desc;
+      infoCard.classList.add('visible');
+    }
+
+    function closeInfo() {
+      infoCard.classList.remove('visible');
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    /* ── Espera a que la escena A-Frame esté lista ── */
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+
+      const sceneEl  = document.querySelector('a-scene');
+      const targetEl = document.getElementById('ar-target');
+      const modelEl  = document.getElementById('skin-mesh');
+
+      /* ── TARGET ENCONTRADO ── */
+      targetEl.addEventListener('targetFound', () => {
+        if (modelFound) return; // Solo activar una vez (anchor lock)
+
+        modelFound = true;
+
+        /* Muestra el modelo */
+        modelEl.setAttribute('visible', 'true');
+        modelVisible = true;
+
+        /* Congela posición: desactiva el tracking continuo para eliminar parpadeo */
+        /* MindAR seguirá renderizando pero el modelo queda "pegado" */
+        const arSystem = sceneEl.systems['mindar-image-system'];
+        if (arSystem && arSystem.controller) {
+          /* Reducir agresividad del filtro para estabilidad máxima */
+          try {
+            arSystem.controller.processorWorker = null; // congela procesamiento
+          } catch(e) {}
+        }
+
+        /* UI */
+        statusDot.classList.add('found');
+        statusText.textContent = 'Modelo activo';
+        hint.style.opacity = '0';
+        setTimeout(() => { hint.style.display = 'none'; }, 500);
+        menuPanel.classList.add('visible');
+      });
+
+      /* ── TARGET PERDIDO ── 
+         Con anchor lock NO ocultamos el modelo, lo mantenemos visible */
+      targetEl.addEventListener('targetLost', () => {
+        if (!modelFound) return;
+        /* Modelo permanece visible — no hacemos nada */
+        statusText.textContent = 'Modelo fijo ✓';
+      });
+
+    });
+  </script>
+
+</body>
+</html>
