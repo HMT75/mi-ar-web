@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Piel y Tejidos Blandos</title>
+    <!-- A-Frame — versión original de Oscar que SÍ activaba la cámara -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- MindAR — versión original de Oscar -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <a-scene
+      mindar-image="imageTargetSrc: assets/targets.mind;"
+      embedded
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <a-asset-item id="model" src="assets/model.glb"></a-asset-item>
+      </a-assets>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          src="#model"
+          position="0 -0.02 0"
+          rotation="90 0 0"
+          scale="0.2 0.2 0.2"
+        ></a-gltf-model>
+      </a-entity>
+
+      <a-camera look-controls="enabled: false"></a-camera>
+    </a-scene>
+  </body>
+</html>
