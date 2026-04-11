@@ -31,7 +31,7 @@
         object-fit: contain; border-radius: 20px; display: none;
       }
       #splash-img.cargada { display: block; }
-      #splash-icon { font-size: 60px; line-height: 1; }
+      #splash-icon { font-size: 75px; line-height: 1; }
 
       #splash-titulo {
         color: #fff; font-size: 18px; font-weight: 600;
@@ -190,7 +190,7 @@
       <img id="splash-img" src="assets/logo.png"
         onload="this.classList.add('cargada'); document.getElementById('splash-icon').style.display='none';"
         onerror="this.style.display='none';" alt="Logo"/>
-      <div id="splash-icon">🫁</div>
+      <div id="splash-icon">🔬</div>
       <div id="splash-titulo">Infección de Piel<br>y Tejidos Blandos</div>
       <div class="barra-wrap"><div class="barra-fill"></div></div>
       <div id="splash-sub">Iniciando cámara AR...</div>
@@ -244,7 +244,7 @@
           <a-gltf-model
             id="mi-modelo"
             src="#model"
-            position="0 0.15 0"
+            position="0 0 0"
             rotation="0 0 0"
             scale="0.2 0.2 0.2"
           ></a-gltf-model>
