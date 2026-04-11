@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Piel y Tejidos Blandos</title>
+
+    <!-- Versiones originales de Oscar — NO cambiar, la cámara funciona con estas -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      html, body {
+        margin: 0; padding: 0;
+        width: 100%; height: 100%;
+        overflow: hidden;
+      }
+
+      /* ── Botón volver ── */
+      #btn-back {
+        position: fixed;
+        top: 14px; left: 14px;
+        z-index: 9999;
+        background: rgba(0,0,0,0.6);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: #fff;
+        border-radius: 22px;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-family: -apple-system, sans-serif;
+        cursor: pointer;
+      }
+
+      /* ── Indicador de estado ── */
+      #estado {
+        position: fixed;
+        top: 14px; right: 14px;
+        z-index: 9999;
+        background: rgba(0,0,0,0.6);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: #fff;
+        border-radius: 22px;
+        padding: 8px 16px;
+        font-size: 12px;
+        font-family: -apple-system, sans-serif;
+        display: flex; align-items: center; gap: 8px;
+      }
+      #dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #f59e0b;
+        animation: parpadea 1.3s infinite;
+      }
+      #dot.activo { background: #22c55e; animation: none; }
+      @keyframes parpadea { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+      /* ── Instrucción ── */
+      #hint {
+        position: fixed;
+        bottom: 220px; left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        border-radius: 14px;
+        padding: 12px 22px;
+        font-size: 14px;
+        font-family: -apple-system, sans-serif;
+        text-align: center;
+        line-height: 1.5;
+        max-width: 280px;
+        border: 1px solid rgba(255,255,255,0.2);
+        transition: opacity 0.5s;
+      }
+
+      /* ── Panel flotante inferior ── */
+      #panel {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 9999;
+        background: rgba(6,15,30,0.94);
+        border-top: 1px solid rgba(255,255,255,0.12);
+        padding: 14px 16px 30px;
+        font-family: -apple-system, sans-serif;
+        display: none;
+      }
+      #panel.visible { display: block; }
+
+      .plabel {
+        font-size: 10px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.35);
+        text-align: center;
+        margin-bottom: 14px;
+      }
+
+      .numeros {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .nbtn {
+        width: 46px; height: 46px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+        border: 1.5px solid rgba(255,255,255,0.25);
+        color: #fff;
+        font-size: 17px; font-weight: 700;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-family: -apple-system, sans-serif;
+      }
+      .nbtn.activo { background: #15803d; border-color: #15803d; }
+
+      /* ── Tarjeta de info ── */
+      #infocard {
+        display: none;
+        margin-top: 14px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 14px;
+        padding: 14px 16px;
+      }
+      #infocard.visible { display: block; }
+
+      #info-cerrar {
+        float: right;
+        background: none; border: none;
+        color: rgba(255,255,255,0.45);
+        font-size: 22px; cursor: pointer;
+        line-height: 1; font-family: -apple-system, sans-serif;
+      }
+      #info-titulo {
+        font-size: 15px; font-weight: 700;
+        color: #fff; margin-bottom: 6px;
+      }
+      #info-texto {
+        font-size: 13px;
+        color: rgba(255,255,255,0.7);
+        line-height: 1.7;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Botón volver ── -->
+    <button id="btn-back" onclick="location.href='index.html'">← Volver</button>
+
+    <!-- ── Estado ── -->
+    <div id="estado">
+      <div id="dot"></div>
+      <span id="estado-txt">Buscando marcador...</span>
+    </div>
+
+    <!-- ── Instrucción inicial ── -->
+    <div id="hint">📷 Apunta la cámara al marcador para activar el modelo 3D</div>
+
+    <!-- ══════════════════════════════════════
+         ESCENA AR — código original de Oscar
+         (embedded + versiones originales)
+         ══════════════════════════════════════ -->
+    <a-scene
+      mindar-image="imageTargetSrc: assets/targets.mind;"
+      embedded
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <a-asset-item id="model" src="assets/model.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- El modelo empieza INVISIBLE — se activa solo al detectar el target -->
+      <a-entity mindar-image-target="targetIndex: 0" id="target-entity">
+        <a-gltf-model
+          id="mi-modelo"
+          src="#model"
+          position="0 -0.02 0"
+          rotation="90 0 0"
+          scale="0.2 0.2 0.2"
+          visible="false"
+        ></a-gltf-model>
+      </a-entity>
+
+      <a-camera look-controls="enabled: false"></a-camera>
+    </a-scene>
+
+    <!-- ══════════════════════════════════════
+         PANEL FLOTANTE DE CAPAS HISTOLÓGICAS
+         ══════════════════════════════════════ -->
+    <div id="panel">
+      <div class="plabel">Capas histológicas — toca un número</div>
+      <div class="numeros" id="numeros"></div>
+      <div id="infocard">
+        <button id="info-cerrar" onclick="cerrarInfo()">×</button>
+        <div id="info-titulo"></div>
+        <div id="info-texto"></div>
+      </div>
+    </div>
+
+    <script>
+      /* ══════════════════════════════════════════
+         CAPAS HISTOLÓGICAS DE LA PIEL
+         Fuente: Histología de Ross + Junqueira
+         Puedes editar el texto de cada capa
+         ══════════════════════════════════════════ */
+      const CAPAS = [
+        {
+          n: 1,
+          nombre: "Epidermis",
+          texto: "Epitelio escamoso estratificado queratinizado. Compuesta por 4–5 estratos: córneo, lúcido (solo en palmas/plantas), granuloso, espinoso y basal. Los queratinocitos migran desde la capa basal hasta descamarse en ~28 días. Grosor: 0.05–1.5 mm."
+        },
+        {
+          n: 2,
+          nombre: "Dermis papilar",
+          texto: "Tejido conectivo laxo superficial. Forma las papilas dérmicas que interdigitan con la epidermis. Rica en capilares y corpúsculos de Meissner (tacto fino). Contiene fibras de colágeno tipo I y III delgadas."
+        },
+        {
+          n: 3,
+          nombre: "Dermis reticular",
+          texto: "Tejido conectivo denso irregular. Contiene haces gruesos de colágeno tipo I que dan resistencia mecánica. Alberga folículos pilosos, glándulas sebáceas, glándulas sudoríparas ecrinas y apocrinas, y corpúsculos de Pacini (presión profunda)."
+        },
+        {
+          n: 4,
+          nombre: "Hipodermis",
+          texto: "Tejido adiposo subcutáneo (no es parte de la piel stricto sensu). Formada por adipocitos en lobulillos separados por tabiques fibrosos. Función: aislamiento térmico, reserva energética, amortiguación. Contiene vasos sanguíneos y nervios de mayor calibre."
+        },
+        {
+          n: 5,
+          nombre: "Anexos cutáneos",
+          texto: "Estructuras derivadas de la epidermis: folículo piloso (produce el pelo), glándulas sebáceas (sebo → lubricación), glándulas ecrinas (sudor acuoso → termorregulación), glándulas apocrinas (sudor proteico → axilas, ingles). Uñas: placas de queratina dura."
+        }
+      ];
+
+      /* ══════════════════════════════════════════
+         ANCHOR-LOCK ANTI-PARPADEO
+         El truco: cuando el target se detecta POR PRIMERA VEZ,
+         mostramos el modelo y lo "desconectamos" del tracking.
+         Si el target se pierde, NO ocultamos el modelo.
+         Resultado: modelo estático sin parpadeo.
+         ══════════════════════════════════════════ */
+      let modeloActivado = false;
+
+      const dot       = document.getElementById('dot');
+      const estadoTxt = document.getElementById('estado-txt');
+      const hint      = document.getElementById('hint');
+      const panel     = document.getElementById('panel');
+      const numeros   = document.getElementById('numeros');
+      const infocard  = document.getElementById('infocard');
+
+      /* Generar botones numéricos */
+      CAPAS.forEach(capa => {
+        const btn = document.createElement('button');
+        btn.className   = 'nbtn';
+        btn.textContent = capa.n;
+        btn.onclick = () => mostrarInfo(capa, btn);
+        numeros.appendChild(btn);
+      });
+
+      function mostrarInfo(capa, btn) {
+        document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+        document.getElementById('info-titulo').textContent = `${capa.n}. ${capa.nombre}`;
+        document.getElementById('info-texto').textContent  = capa.texto;
+        infocard.classList.add('visible');
+      }
+
+      function cerrarInfo() {
+        infocard.classList.remove('visible');
+        document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('activo'));
+      }
+
+      /* Esperar a que A-Frame esté listo */
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+
+        const targetEntity = document.getElementById('target-entity');
+        const modelo       = document.getElementById('mi-modelo');
+
+        /* TARGET DETECTADO */
+        targetEntity.addEventListener('targetFound', () => {
+
+          /* ANCHOR-LOCK: solo actuar la primera vez */
+          if (modeloActivado) return;
+          modeloActivado = true;
+
+          /* Mostrar modelo */
+          modelo.setAttribute('visible', 'true');
+
+          /* UI */
+          dot.classList.add('activo');
+          estadoTxt.textContent = 'Modelo activo ✓';
+          hint.style.opacity    = '0';
+          setTimeout(() => { hint.style.display = 'none'; }, 500);
+          panel.classList.add('visible');
+        });
+
+        /* TARGET PERDIDO — con anchor-lock NO ocultamos el modelo */
+        targetEntity.addEventListener('targetLost', () => {
+          if (!modeloActivado) return;
+          /* No hacemos nada — el modelo permanece visible y estático */
+          estadoTxt.textContent = 'Modelo fijo ✓';
+        });
+
+      });
+    </script>
+
+  </body>
+</html>
