@@ -190,7 +190,7 @@
       <img id="splash-img" src="assets/logo.png"
         onload="this.classList.add('cargada'); document.getElementById('splash-icon').style.display='none';"
         onerror="this.style.display='none';" alt="Logo"/>
-      <div id="splash-icon">🫁</div>
+      <div id="splash-icon">🔬</div>
       <div id="splash-titulo">Infección de Piel<br>y Tejidos Blandos</div>
       <div class="barra-wrap"><div class="barra-fill"></div></div>
       <div id="splash-sub">Iniciando cámara AR...</div>
@@ -226,7 +226,7 @@
 
     </div>
 
-    <!-- ══ ESCENA AR — base original de Oscar ══ -->
+    <!-- ══ ESCENA AR ══ -->
     <a-scene
       mindar-image="imageTargetSrc: assets/targets.mind;"
       embedded
@@ -242,7 +242,7 @@
           id="mi-modelo"
           src="#model"
           position="0 -0.02 0"
-          rotation="0 0 0"
+          rotation="-90 0 0"
           scale="0.2 0.2 0.2"
           visible="false"
         ></a-gltf-model>
