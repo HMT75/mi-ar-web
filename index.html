@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Infección de Piel y Tejidos Blandos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(160deg, #0a1628 0%, #102040 60%, #0e2a1a 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    /* ══════════════════════════════════════
+       PANTALLA DE ADVERTENCIA (disclaimer)
+       ══════════════════════════════════════ */
+    #disclaimer {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: linear-gradient(160deg, #060e1a 0%, #0a1828 60%, #081a10 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+    }
+
+    .disc-inner {
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* Icono de advertencia */
+    .disc-icon-wrap {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: rgba(245,158,11,0.15);
+      border: 2px solid rgba(245,158,11,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin-bottom: 1.5rem;
+      animation: pulse-warn 2s infinite;
+    }
+    @keyframes pulse-warn {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
+      50%      { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
+    }
+
+    /* Etiqueta */
+    .disc-tag {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #f59e0b;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Título */
+    .disc-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    /* Institución */
+    .disc-inst {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      margin-bottom: 1.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Caja de aviso */
+    .disc-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 1.25rem 1.25rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+    }
+
+    .disc-box-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 0.75rem;
+    }
+
+    .disc-box p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.7;
+    }
+
+    .disc-box p + p {
+      margin-top: 0.6rem;
+    }
+
+    .disc-highlight {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    /* Separador */
+    .disc-sep {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Pregunta de confirmación */
+    .disc-question {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 1.1rem;
+    }
+
+    /* Opciones de radio */
+    .disc-options {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .disc-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .disc-option:active { background: rgba(255,255,255,0.1); }
+
+    .disc-option.selected {
+      background: rgba(29,158,117,0.15);
+      border-color: #1d9e75;
+    }
+
+    /* Círculo radio custom */
+    .disc-radio {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s;
+    }
+    .disc-option.selected .disc-radio {
+      border-color: #1d9e75;
+      background: #1d9e75;
+    }
+    .disc-radio-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      display: none;
+    }
+    .disc-option.selected .disc-radio-dot { display: block; }
+
+    .disc-option-text {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.4;
+    }
+    .disc-option.selected .disc-option-text { color: #fff; }
+
+    /* Checkbox de términos */
+    .disc-check-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .disc-checkbox {
+      width: 20px; height: 20px; flex-shrink: 0;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      margin-top: 1px;
+    }
+    .disc-checkbox.checked {
+      background: #1d9e75;
+      border-color: #1d9e75;
+    }
+    .disc-checkbox-mark {
+      font-size: 12px;
+      color: #fff;
+      display: none;
+    }
+    .disc-checkbox.checked .disc-checkbox-mark { display: block; }
+
+    .disc-check-label {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+    }
+
+    /* Botón entrar */
+    #btn-entrar {
+      width: 100%;
+      background: #1d9e75;
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      opacity: 0.35;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+    #btn-entrar.habilitado {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #btn-entrar.habilitado:active { transform: scale(0.98); }
+
+    /* Mensaje de bloqueo */
+    #msg-bloqueado {
+      margin-top: 1rem;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      display: none;
+    }
+    #msg-bloqueado.visible { display: block; }
+
+    /* Fade out del disclaimer */
+    #disclaimer.saliendo {
+      animation: fadeOut 0.5s ease forwards;
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; pointer-events: none; }
+    }
+
+    /* ══════════════════════════════════════
+       CONTENIDO PRINCIPAL (oculto hasta pasar disclaimer)
+       ══════════════════════════════════════ */
+    #main-content {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 3rem;
+      min-height: 100vh;
+      animation: fadeIn 0.5s ease;
+    }
+    #main-content.visible { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      max-width: 480px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+    }
+
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: rgba(255,255,255,0.2);
+      margin: 1.5rem auto;
+      border-radius: 2px;
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      text-decoration: none;
+      color: #fff;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .card-icon {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+
+    .icon-ar   { background: rgba(29,158,117,0.25); }
+    .icon-alg  { background: rgba(55,138,221,0.25); }
+    .icon-clas { background: rgba(216,90,48,0.25);  }
+
+    .card-text h2 { font-size: 1rem; font-weight: 600; margin-bottom: 3px; }
+    .card-text p  { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.4; }
+
+    .card-arrow {
+      margin-left: auto;
+      font-size: 18px;
+      color: rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.25);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .signal-note {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 1.5rem;
+      max-width: 320px;
+    }
+
+    .signal-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #1d9e75;
+      flex-shrink: 0;
+    }
+
+    /* Pill de perfil confirmado */
+    .perfil-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(29,158,117,0.15);
+      border: 1px solid rgba(29,158,117,0.35);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.75rem;
+      color: #1d9e75;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════
+       PANTALLA DE ADVERTENCIA
+       ══════════════════════════════════════ -->
+  <div id="disclaimer">
+    <div class="disc-inner">
+
+      <div class="disc-icon-wrap">⚕️</div>
+
+      <div class="disc-tag">Aviso importante</div>
+
+      <div class="disc-title">Contenido de uso<br>exclusivamente clínico</div>
+      <div class="disc-inst">HUEM · Universidad de Pamplona · Proyecto IPTB</div>
+
+      <div class="disc-box">
+        <div class="disc-box-title">Antes de continuar, lea atentamente</div>
+        <p>
+          Todo el contenido de esta herramienta —modelos 3D, algoritmos diagnósticos y clasificaciones clínicas—
+          ha sido desarrollado con <span class="disc-highlight">fines exclusivamente educativos</span>
+          dentro del área de la salud.
+        </p>
+        <p>
+          La información presentada está basada en guías de práctica clínica vigentes y puede estar
+          <span class="disc-highlight">sujeta a cambios según la epidemiología local</span> y actualizaciones científicas.
+        </p>
+        <p>
+          Este material <span class="disc-highlight">no reemplaza el criterio clínico</span> del profesional
+          de la salud ni constituye una guía de automedicación.
+        </p>
+      </div>
+
+      <div class="disc-sep"></div>
+
+      <div class="disc-question">¿Cuál es tu perfil?</div>
+
+      <div class="disc-options" id="opciones">
+
+        <div class="disc-option" onclick="seleccionarOpcion(this, 'estudiante')">
+          <div class="disc-radio"><div class="disc-radio-dot"></div></div>
+          <div class="disc-option-text">
+            Soy <strong>estudiante de ciencias de la salud</strong><br>
+            <span style="font-size:0.75rem; opacity:0.6;">Medicina, Enfermería, Bacteriología u otras</span>
+          </div>
+        </div>
+
+        <div class="disc-option" onclick="seleccionarOpcion(this, 'profesional')">
+          <div class="disc-radio"><div class="disc-radio-dot"></div></div>
+          <div class="disc-option-text">
+            Soy <strong>profesional de la salud</strong><br>
+            <span style="font-size:0.75rem; opacity:0.6;">Médico, enfermero, farmacéutico u otros</span>
+          </div>
+        </div>
+
+        <div class="disc-option" onclick="seleccionarOpcion(this, 'docente')">
+          <div class="disc-radio"><div class="disc-radio-dot"></div></div>
+          <div class="disc-option-text">
+            Soy <strong>docente o investigador</strong> en salud<br>
+            <span style="font-size:0.75rem; opacity:0.6;">Con fines académicos o de investigación</span>
+          </div>
+        </div>
+
+        <div class="disc-option disc-option-no" onclick="seleccionarOpcion(this, 'ninguno')">
+          <div class="disc-radio"><div class="disc-radio-dot"></div></div>
+          <div class="disc-option-text">
+            <strong>No pertenezco</strong> al área de la salud
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Checkbox de aceptación -->
+      <div class="disc-check-wrap" id="check-wrap" onclick="toggleCheck()" style="display:none;">
+        <div class="disc-checkbox" id="disc-checkbox">
+          <span class="disc-checkbox-mark">✓</span>
+        </div>
+        <div class="disc-check-label">
+          Declaro que la información anterior es verídica y acepto usar este contenido
+          únicamente con fines educativos dentro del área clínica.
+        </div>
+      </div>
+
+      <button id="btn-entrar" onclick="entrar()">Confirmar y continuar →</button>
+
+      <div id="msg-bloqueado"></div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       CONTENIDO PRINCIPAL
+       ══════════════════════════════════════ -->
+  <div id="main-content">
+
+    <div class="header">
+      <div class="badge">Realidad Aumentada</div>
+      <h1>Infección de Piel y Tejidos Blandos</h1>
+      <p class="subtitle">Herramienta interactiva para diagnóstico y clasificación clínica</p>
+      <div class="divider"></div>
+
+      <!-- Muestra el perfil seleccionado -->
+      <div class="perfil-pill">
+        <span>✓</span>
+        <span id="perfil-label">Acceso verificado</span>
+      </div>
+
+      <div class="signal-note" style="margin: 1rem auto 0;">
+        <div class="signal-dot"></div>
+        Funciona con señal limitada — optimizado para Smartphone
+      </div>
+    </div>
+
+    <div class="cards">
+
+      <a class="card" href="ar.html">
+        <div class="card-icon icon-ar">&#128300;</div>
+        <div class="card-text">
+          <h2>Ver modelo 3D</h2>
+          <p>Apunta tu cámara a la imagen marcador y explora la piel por capas anatómicas</p>
+        </div>
+        <div class="card-arrow">›</div>
+      </a>
+
+      <a class="card" href="algoritmo.html">
+        <div class="card-icon icon-alg">📋</div>
+        <div class="card-text">
+          <h2>Algoritmo diagnóstico</h2>
+          <p>Árbol de decisión clínica según guías de práctica clínica</p>
+        </div>
+        <div class="card-arrow">›</div>
+      </a>
+
+      <a class="card" href="clasificacion.html">
+        <div class="card-icon icon-clas">🩺</div>
+        <div class="card-text">
+          <h2>Clasificación y zonas</h2>
+          <p>Selecciona la zona afectada y consulta la clasificación por tipo de infección</p>
+        </div>
+        <div class="card-arrow">›</div>
+      </a>
+
+    </div>
+
+    <div class="footer">
+      Proyecto IPTB · Sin conexión continua · HUEM / UP<br>
+      ⭐ Lisbeth · Oscar · Yurley ⭐
+    </div>
+
+  </div>
+
+  <script>
+    /* ══════════════════════════════════════
+       LÓGICA DEL DISCLAIMER
+       ══════════════════════════════════════ */
+
+    let perfilSeleccionado = null;
+    let checkMarcado       = false;
+
+    const PERFILES = {
+      estudiante: 'Estudiante de ciencias de la salud',
+      profesional: 'Profesional de la salud',
+      docente: 'Docente / Investigador en salud'
+    };
+
+    function seleccionarOpcion(el, tipo) {
+      /* Limpiar selecciones anteriores */
+      document.querySelectorAll('.disc-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      perfilSeleccionado = tipo;
+
+      const checkWrap  = document.getElementById('check-wrap');
+      const msgBlq     = document.getElementById('msg-bloqueado');
+      const btnEntrar  = document.getElementById('btn-entrar');
+
+      if (tipo === 'ninguno') {
+        /* Bloquear acceso */
+        checkWrap.style.display = 'none';
+        checkMarcado = false;
+        btnEntrar.classList.remove('habilitado');
+        msgBlq.innerHTML = '⚠️ Este contenido está diseñado exclusivamente para el área de la salud.<br>Si crees que esto es un error, consulta con el organizador.';
+        msgBlq.classList.add('visible');
+      } else {
+        /* Mostrar checkbox */
+        checkWrap.style.display = 'flex';
+        msgBlq.classList.remove('visible');
+        verificarHabilitado();
+      }
+    }
+
+    function toggleCheck() {
+      if (perfilSeleccionado === 'ninguno' || !perfilSeleccionado) return;
+      checkMarcado = !checkMarcado;
+      const cb = document.getElementById('disc-checkbox');
+      cb.classList.toggle('checked', checkMarcado);
+      verificarHabilitado();
+    }
+
+    function verificarHabilitado() {
+      const btn = document.getElementById('btn-entrar');
+      const ok  = perfilSeleccionado && perfilSeleccionado !== 'ninguno' && checkMarcado;
+      btn.classList.toggle('habilitado', ok);
+    }
+
+    function entrar() {
+      if (!perfilSeleccionado || perfilSeleccionado === 'ninguno' || !checkMarcado) return;
+
+      /* Guardar perfil en sessionStorage para mostrarlo en el menú */
+      sessionStorage.setItem('perfilIPTB', PERFILES[perfilSeleccionado]);
+
+      /* Animar salida del disclaimer */
+      const disc = document.getElementById('disclaimer');
+      disc.classList.add('saliendo');
+      setTimeout(() => {
+        disc.style.display = 'none';
+        mostrarMain();
+      }, 500);
+    }
+
+    function mostrarMain() {
+      const main  = document.getElementById('main-content');
+      const label = document.getElementById('perfil-label');
+      const perfil = sessionStorage.getItem('perfilIPTB') || 'Acceso verificado';
+      label.textContent = perfil;
+      main.classList.add('visible');
+    }
+
+    /* Al cargar: si ya aceptó en esta sesión, saltar el disclaimer */
+    window.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('perfilIPTB')) {
+        document.getElementById('disclaimer').style.display = 'none';
+        mostrarMain();
+      }
+    });
+  </script>
+
+</body>
+</html>
